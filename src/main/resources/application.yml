@@ -1,0 +1,38 @@
+
+# App configuration
+ladbinance:
+  database:
+    username: postgres
+    password: password
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://localhost:5432/postgres
+
+# Spring Boot configuration
+spring:
+  security:
+  # Database
+  datasource:
+    continue-on-error: false
+    platform: postgres
+  # JPA properties
+  jpa:
+    generate-ddl: true
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    database: postgresql
+    properties:
+      hibernate:
+        default_schema: ladbinance
+# Logger configuration
+logging:
+  pattern:
+    console: "%d %-5level %logger : %msg%n"
+  level:
+    org.springframework: info
+    org.hibernate: error
+# Server configuration
+server:
+  port: 8080 #set your port
+  servlet:
+    context-path: /ladbinance
