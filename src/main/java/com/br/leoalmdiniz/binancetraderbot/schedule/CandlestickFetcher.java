@@ -14,43 +14,32 @@ import org.springframework.scheduling.annotation.Scheduled;
 
 import com.binance.api.client.BinanceApiCallback;
 import com.binance.api.client.BinanceApiClientFactory;
-import com.binance.api.client.BinanceApiWebSocketClient;
 import com.binance.api.client.domain.event.CandlestickEvent;
 import com.binance.api.client.domain.market.CandlestickInterval;
 import com.br.leoalmdiniz.binancetraderbot.dto.OperationParametersDTO;
+import com.br.leoalmdiniz.binancetraderbot.dto.PriceDataDTO;
 import com.br.leoalmdiniz.binancetraderbot.model.OperationParameterModel;
 import com.br.leoalmdiniz.binancetraderbot.repository.OperationParametersRepository;
-import com.br.leoalmdiniz.binancetraderbot.util.ReflectUtil;
+import com.br.leoalmdiniz.binancetraderbot.utils.PredicateUtils;
+import com.br.leoalmdiniz.binancetraderbot.utils.ReflectUtils;
 
 @Configuration
 @EnableScheduling
-public class DatabaseFetcher {
+public class CandlestickFetcher {
 
 	@Autowired private OperationParametersRepository operationParametersRepository;
 	@Autowired private OperationParametersDTO currentOperationParametersDTO;
+	@Autowired private PriceDataDTO priceDataDTO;
 	private Closeable ws;
-	private final Logger LOGGER = LoggerFactory.getLogger(DatabaseFetcher.class);
+	
+	private final Logger LOGGER = LoggerFactory.getLogger(CandlestickFetcher.class);
 
 	@Scheduled(fixedDelay = 10000)
-	public void fetchOperationParameters() throws IOException {
+	public void updateOperationParameters() throws IOException {
 		if (ws == null ) {
 			initializeWebSocket();
 		}
-
-		List<OperationParameterModel> databaseOperationParameters = operationParametersRepository.findAll();
-		OperationParametersDTO databaseOperationParametersDTO = OperationParametersDTO.newInstance();
-		
-		for (OperationParameterModel parameter : databaseOperationParameters) {
-			Statement statement = new Statement(databaseOperationParametersDTO, 
-					ReflectUtil.setterFrom(parameter.getName()),
-					new String[] { parameter.getValue() }
-			);
-			try {
-				statement.execute();
-			} catch (Exception e) {
-				LOGGER.error( "Could not fetch parameters from database. Cause: " + e.getCause() );
-			}
-		}
+		OperationParametersDTO databaseOperationParametersDTO = lookParameters();
 		if (!databaseOperationParametersDTO.equals(currentOperationParametersDTO)) {
 			String oldPair = currentOperationParametersDTO.getOperationPair();
 			currentOperationParametersDTO.refreshFields(databaseOperationParametersDTO);
@@ -59,6 +48,9 @@ public class DatabaseFetcher {
 				ws.close();
 				ws = null;
 			}
+			if (PredicateUtils.booleanCheck(currentOperationParametersDTO.getExitIfParametersAlter())) {
+				// ASYNC CLOSE ALL OPEN TRADES
+			}
 		}
 	}
 
@@ -66,7 +58,7 @@ public class DatabaseFetcher {
 		return new BinanceApiCallback<CandlestickEvent>() {
 			@Override
 			public void onResponse(CandlestickEvent ce) {
-				System.out.println(ce);
+				priceDataDTO.refreshPrice(ce.getClose());
 			}
 		};
 	}
@@ -77,6 +69,23 @@ public class DatabaseFetcher {
 				currentOperationParametersDTO.getOperationPair().toLowerCase(), 
 				CandlestickInterval.ONE_MINUTE, 
 				candlestickSupplier());
+	}
+	
+	private OperationParametersDTO lookParameters() {
+		OperationParametersDTO databaseOperationParametersDTO = OperationParametersDTO.newInstance();
+		List<OperationParameterModel> databaseOperationParameters = operationParametersRepository.findAll();
+		for (OperationParameterModel parameter : databaseOperationParameters) {
+			Statement statement = new Statement(databaseOperationParametersDTO, 
+					ReflectUtils.setterFrom(parameter.getName()),
+					new String[] { parameter.getValue() }
+			);
+			try {
+				statement.execute();
+			} catch (Exception e) {
+				LOGGER.error( "Could not fetch parameters from database. Cause: " + e.getCause() );
+			}
+		}
+		return databaseOperationParametersDTO;
 	}
 
 }
