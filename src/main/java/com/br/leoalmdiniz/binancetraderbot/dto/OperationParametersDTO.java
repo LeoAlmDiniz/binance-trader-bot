@@ -1,5 +1,7 @@
 package com.br.leoalmdiniz.binancetraderbot.dto;
 
+import com.br.leoalmdiniz.binancetraderbot.utils.PredicateUtils;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.EqualsAndHashCode;
@@ -17,16 +19,17 @@ import lombok.ToString;
 @EqualsAndHashCode
 public final class OperationParametersDTO {
 
-	public String operationPair;
-	public String operateLong;
-	public String operateShort;
-	public String operateGrid;
-	public String exitIfConditionsRevert;
-	public String exitIfParametersAlter;
-	public String stopLossId;
-	public String trailingStopId;
-	public String reinforceId;
-	public String criteriaId;
+	private String operationPair;
+	private String operateLong;
+	private String operateShort;
+	private String operateGrid;
+	private String exitIfConditionsRevert;
+	private String exitIfParametersAlter;
+	private String stopLossId;
+	private String trailingStopId;
+	private String reinforceId;
+	private String criteriaId;
+	private String operationInterval;
 
 	public static OperationParametersDTO newInstance() {
     	return new OperationParametersDTO();
@@ -43,6 +46,15 @@ public final class OperationParametersDTO {
 		this.trailingStopId = operationParametersDTO.getTrailingStopId();
 		this.reinforceId = operationParametersDTO.getReinforceId();
 		this.criteriaId = operationParametersDTO.getCriteriaId();
+		this.operationInterval = operationParametersDTO.getOperationInterval();
+	}
+	
+	public boolean operatesGrid() {
+		return PredicateUtils.booleanCheck(this.operateGrid);
+	}
+	
+	public boolean closeTradesWhenParametersAlter() {
+		return PredicateUtils.booleanCheck(this.exitIfParametersAlter);
 	}
 
 }

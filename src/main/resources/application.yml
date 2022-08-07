@@ -9,6 +9,8 @@ ladbinance:
 
 # Spring Boot configuration
 spring:
+  main:
+    lazy-initialization: true
   security:
   # Database
   datasource:
